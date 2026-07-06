@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ARMS — Student Academic Portal | SSE Saveetha</title>
+<meta name="description" content="Complete student academic history — marks, results, attendance for all SSE students"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#060c1a;--bg2:#0b1428;--bg3:#0f1e3a;
+  --surf:#111d35;--surf2:#162342;--surf3:#1a2a50;
+  --bdr:rgba(99,179,237,.12);--bdr2:rgba(99,179,237,.22);--bdr3:rgba(99,179,237,.35);
+  --acc:#3b82f6;--acc2:#60a5fa;
+  --cyan:#22d3ee;--violet:#a78bfa;
+  --green:#4ade80;--red:#f87171;--yellow:#fbbf24;--orange:#fb923c;
+  --txt:#e2e8f0;--txt2:#94a3b8;--txt3:#64748b;
+  --r:16px;--r2:12px;--r3:8px;
+  --shadow:0 8px 32px rgba(0,0,0,.6);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden;}
+
+/* BG */
+.bg-orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.15;}
+.orb1{width:600px;height:600px;background:#3b82f6;top:-200px;left:-100px;animation:drift1 18s ease-in-out infinite;}
+.orb2{width:500px;height:500px;background:#8b5cf6;bottom:-150px;right:-100px;animation:drift2 22s ease-in-out infinite;}
+.orb3{width:400px;height:400px;background:#06b6d4;top:40%;left:50%;animation:drift3 15s ease-in-out infinite;}
+@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,40px)}}
+@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,60px)}}
+@keyframes drift3{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.2)}}
+
+/* LAYOUT */
+.app{position:relative;z-index:1;display:grid;grid-template-rows:auto 1fr;min-height:100vh;}
+
+/* ══ TOPBAR ══ */
+.topbar{
+  display:flex;align-items:center;gap:16px;padding:14px 24px;
+  background:rgba(11,20,40,.85);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:200;
+}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 16px rgba(59,130,246,.4);}
+.logo-text{font-size:17px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(90deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo-sub{font-size:10px;color:var(--txt3);letter-spacing:.5px;}
+.topbar-search{
+  flex:1;max-width:500px;margin:0 auto;
+  display:flex;align-items:center;gap:10px;
+  background:var(--surf);border:1px solid var(--bdr2);border-radius:10px;
+  padding:8px 14px;transition:all .3s;
+}
+.topbar-search:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px rgba(59,130,246,.15);}
+.topbar-search input{flex:1;background:none;border:none;outline:none;color:var(--txt);font-size:14px;font-family:'Inter',sans-serif;}
+.topbar-search input::placeholder{color:var(--txt3);}
+.status-pill{display:flex;align-items:center;gap:6px;background:var(--surf);border:1px solid var(--bdr);border-radius:20px;padding:6px 14px;font-size:12px;color:var(--txt2);margin-left:auto;}
+.dot-live{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ══ MAIN ══ */
+.main {
+  display: block;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Empty state */
+.empty-right{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:50vh;text-align:center;gap:16px;padding:40px;
+}
+.empty-icon{font-size:60px;opacity:.3;}
+.empty-title{font-size:20px;font-weight:700;color:var(--txt2);}
+.empty-sub{font-size:14px;color:var(--txt3);max-width:320px;}
+
+/* Loading panel */
+.panel-loading{display:flex;align-items:center;justify-content:center;min-height:50vh;flex-direction:column;gap:12px;}
+.spinner{width:40px;height:40px;border:3px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ══ STUDENT DETAIL ══ */
+.detail{padding:0px;animation:fadeUp .4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* Profile hero */
+.profile-hero{
+  background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:28px;margin-bottom:20px;
+  display:flex;gap:24px;align-items:flex-start;
+  position:relative;overflow:hidden;
+}
+.profile-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#22d3ee);}
+.hero-photo{
+  width:90px;height:90px;border-radius:18px;flex-shrink:0;
+  background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;font-weight:800;color:#fff;
+  border:3px solid var(--bdr2);overflow:hidden;box-shadow:var(--shadow);
+}
+.hero-photo img{width:100%;height:100%;object-fit:cover;}
+.hero-info{flex:1;}
+.hero-name{font-size:24px;font-weight:800;letter-spacing:-.5px;color:#fff;margin-bottom:4px;}
+.hero-reg{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan);margin-bottom:10px;}
+.hero-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.tag{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid;}
+.tag-prog{background:rgba(59,130,246,.15);color:#93c5fd;border-color:rgba(59,130,246,.25);}
+.tag-batch{background:rgba(167,139,250,.15);color:#c4b5fd;border-color:rgba(167,139,250,.25);}
+.tag-dept{background:rgba(34,211,238,.15);color:#67e8f9;border-color:rgba(34,211,238,.25);}
+.hero-contacts{display:flex;flex-wrap:wrap;gap:12px;}
+.contact-item{font-size:12px;color:var(--txt2);display:flex;align-items:center;gap:5px;}
+
+/* Stat cards */
+.stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px;}
+@media(max-width:1200px){.stats-row{grid-template-columns:repeat(3,1fr);}}
+.scard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r2);padding:16px;text-align:center;position:relative;overflow:hidden;transition:all .2s;}
+.scard:hover{border-color:var(--bdr2);transform:translateY(-2px);}
+.scard::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;}
+.scard-total::after{background:#3b82f6;}.scard-pass::after{background:#4ade80;}
+.scard-fail::after{background:#f87171;}.scard-marks::after{background:#22d3ee;}
+.scard-pct::after{background:#fbbf24;}.scard-cgpa::after{background:#a78bfa;}
+.scard-val{font-size:26px;font-weight:800;letter-spacing:-1px;line-height:1;}
+.scard-total .scard-val{color:#60a5fa;}.scard-pass .scard-val{color:#4ade80;}
+.scard-fail .scard-val{color:#f87171;}.scard-marks .scard-val{color:#22d3ee;}
+.scard-pct .scard-val{color:#fbbf24;}.scard-cgpa .scard-val{color:#a78bfa;}
+.scard-lbl{font-size:11px;color:var(--txt3);margin-top:4px;font-weight:500;}
+.scard-sub{font-size:10px;color:var(--txt3);margin-top:1px;}
+
+/* Section header */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.sec-title{font-size:13px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:8px;}
+.sec-title::before{content:'';width:3px;height:14px;border-radius:2px;background:var(--acc);}
+.sec-badge{font-size:11px;background:var(--surf);border:1px solid var(--bdr);border-radius:20px;padding:3px 10px;color:var(--txt3);}
+
+/* Charts row */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+@media(max-width:1100px){.charts-row{grid-template-columns:1fr;}}
+.chart-box{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r2);padding:20px;}
+.chart-lbl{font-size:13px;font-weight:700;margin-bottom:4px;}
+.chart-sub{font-size:11px;color:var(--txt3);margin-bottom:16px;}
+.chart-wrap{position:relative;height:200px;}
+
+/* Semester accordion */
+.sem-block{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r2);margin-bottom:10px;overflow:hidden;transition:border-color .2s;}
+.sem-block:hover{border-color:var(--bdr2);}
+.sem-block.open{border-color:rgba(59,130,246,.35);}
+.sem-toggle{width:100%;background:none;border:none;cursor:pointer;padding:14px 18px;display:flex;align-items:center;gap:14px;font-family:'Inter',sans-serif;text-align:left;transition:background .2s;}
+.sem-toggle:hover{background:rgba(255,255,255,.03);}
+.sem-num{width:28px;height:28px;border-radius:8px;background:var(--surf2);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--txt2);flex-shrink:0;}
+.sem-block.open .sem-num{background:rgba(59,130,246,.2);border-color:rgba(59,130,246,.4);color:#60a5fa;}
+.sem-info{flex:1;}
+.sem-name{font-size:14px;font-weight:700;color:var(--txt);}
+.sem-meta{font-size:11px;color:var(--txt3);margin-top:1px;}
+.sem-right{display:flex;align-items:center;gap:8px;}
+.sem-pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.sp-p{background:rgba(74,222,128,.15);color:#4ade80;}
+.sp-f{background:rgba(248,113,113,.15);color:#f87171;}
+.sp-m{background:rgba(251,191,36,.12);color:#fbbf24;font-family:'JetBrains Mono',monospace;font-size:12px;}
+.sem-arrow{font-size:16px;color:var(--txt3);transition:transform .3s;}
+.sem-block.open .sem-arrow{transform:rotate(180deg);}
+.sem-body{display:none;border-top:1px solid var(--bdr);}
+.sem-block.open .sem-body{display:block;}
+.sem-prog{height:3px;background:linear-gradient(90deg,#4ade80,#3b82f6);}
+
+/* ═══════════════ MARKS TABLE (matches screenshot) ═══════════════ */
+.marks-table-wrap{overflow-x:auto;}
+.marks-table{width:100%;border-collapse:collapse;font-size:13px;}
+.marks-table th{
+  background:var(--bg2);color:var(--txt3);font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.6px;padding:10px 14px;text-align:left;
+  border-bottom:1px solid var(--bdr);white-space:nowrap;
+}
+.marks-table td{padding:12px 14px;border-bottom:1px solid rgba(99,179,237,.07);vertical-align:middle;}
+.marks-table tr:last-child td{border-bottom:none;}
+.marks-table tr{transition:background .15s;}
+.marks-table tr:hover td{background:rgba(255,255,255,.02);}
+.marks-table tr.row-fail td{background:rgba(248,113,113,.04);}
+
+/* Subject row with expand */
+.subj-row{cursor:pointer;}
+.subj-row td{padding:14px;}
+.subj-expand{cursor:pointer;background:rgba(59,130,246,.05) !important;}
+
+/* Mark bar */
+.mbar-wrap{display:flex;align-items:center;gap:10px;min-width:140px;}
+.mbar{flex:1;height:7px;background:var(--bg2);border-radius:4px;overflow:hidden;}
+.mbar-fill{height:100%;border-radius:4px;transition:width 1.2s ease;}
+.mval{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;min-width:55px;text-align:right;}
+
+/* Grade badge */
+.gbadge{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;font-size:13px;font-weight:800;}
+.gO{background:rgba(34,211,238,.2);color:#22d3ee;}
+.gS{background:rgba(74,222,128,.2);color:#4ade80;}
+.gA{background:rgba(59,130,246,.2);color:#60a5fa;}
+.gB{background:rgba(167,139,250,.2);color:#a78bfa;}
+.gC{background:rgba(251,191,36,.2);color:#fbbf24;}
+.gD{background:rgba(251,146,60,.2);color:#fb923c;}
+.gF{background:rgba(248,113,113,.2);color:#f87171;}
+
+/* Result badge */
+.rbadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;}
+.rPASS{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3);}
+.rFAIL{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.3);}
+
+/* Mark breakdown sub-table */
+.breakdown-row td{padding:0 !important;}
+.breakdown-inner{
+  background:var(--bg2);border-top:1px solid var(--bdr);padding:14px 16px;
+}
+.breakdown-title{font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.bd-table{width:100%;border-collapse:collapse;font-size:12px;}
+.bd-table th{color:var(--txt3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:6px 10px;border-bottom:1px solid var(--bdr);}
+.bd-table td{padding:8px 10px;border-bottom:1px solid rgba(99,179,237,.06);}
+.bd-table tr:last-child td{border-bottom:none;}
+.bd-type-F{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(34,211,238,.15);color:#22d3ee;font-weight:600;}
+.bd-type-S{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(167,139,250,.15);color:#a78bfa;font-weight:600;}
+.bd-pass{color:var(--green);font-weight:700;}
+.bd-fail{color:var(--red);font-weight:700;}
+.bd-mark{font-family:'JetBrains Mono',monospace;font-weight:600;}
+.bd-bar{width:80px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:6px;}
+.bd-bar-fill{height:100%;border-radius:3px;}
+.bd-total-row{background:rgba(59,130,246,.08);font-weight:700;}
+.bd-total-row td{padding:10px;border-top:1px solid var(--bdr2) !important;color:var(--txt);}
+
+/* Attendance */
+.att-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:20px;}
+.att-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r2);padding:14px;}
+.att-sub{font-size:13px;font-weight:600;margin-bottom:2px;}
+.att-fac{font-size:11px;color:var(--txt3);margin-bottom:10px;}
+.att-row{display:flex;align-items:center;gap:8px;}
+.att-bar{flex:1;height:8px;background:var(--bg2);border-radius:4px;overflow:hidden;}
+.att-bar-fill{height:100%;border-radius:4px;}
+.att-pct{font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;min-width:38px;text-align:right;}
+.att-warn{font-size:10px;color:var(--red);margin-top:4px;}
+
+/* Payments */
+.pay-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;}
+.pay-table th{background:var(--bg2);color:var(--txt3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--bdr);}
+.pay-table td{padding:12px 14px;border-bottom:1px solid rgba(99,179,237,.07);}
+.pay-table tr:last-child td{border-bottom:none;}
+.pay-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.ps-Paid{background:rgba(74,222,128,.15);color:#4ade80;}
+.ps-Pending{background:rgba(251,191,36,.15);color:#fbbf24;}
+.pay-amt{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--cyan);}
+
+/* Search dropdown */
+.search-drop{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:var(--surf);border:1px solid var(--bdr2);border-radius:var(--r2);
+  box-shadow:var(--shadow);z-index:300;display:none;
+}
+.search-drop.open{display:block;}
+.sdrop-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;transition:background .15s;}
+.sdrop-item:last-child{border-bottom:none;}
+.sdrop-item:hover{background:var(--surf2);}
+.sdi-reg{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan);}
+.sdi-dept{font-size:11px;color:var(--txt3);}
+
+/* Responsive */
+@media(max-width:900px){
+  .stats-row{grid-template-columns:repeat(3,1fr);}
+  .charts-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="bg-orbs">
+  <div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+</div>
+
+<div class="app">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a class="logo" href="#">
+      <div class="logo-icon">🎓</div>
+      <div><div class="logo-text">ARMS Portal</div><div class="logo-sub">SAVEETHA SCHOOL OF ENGINEERING</div></div>
+    </a>
+    <div style="position:relative;flex:1;max-width:500px;margin:0 auto;">
+      <div class="topbar-search" id="topSearch">
+        <span style="font-size:15px">🔍</span>
+        <input id="searchInput" type="text" placeholder="Search by Reg No or Name…" autocomplete="off"/>
+      </div>
+      <div class="search-drop" id="searchDrop"></div>
+    </div>
+    <div class="status-pill"><div class="dot-live"></div><span id="statusText">Connecting…</span></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- RIGHT -->
+    <div class="right-panel" id="rightPanel">
+      <div class="empty-right">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">Search a Student</div>
+        <div class="empty-sub">Type a student's name or registration number in the search bar above to load their history.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let chartBar = null, chartDonut = null;
+let searchTimer = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  document.getElementById('statusText').textContent = 'Live Connected';
+})();
+
+// ── Search ────────────────────────────────────────────────────────────────────
+const searchInput = document.getElementById('searchInput');
+const searchDrop  = document.getElementById('searchDrop');
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const q = searchInput.value.trim();
+  if (q.length >= 3) searchTimer = setTimeout(() => doLiveSearch(q), 400);
+  else searchDrop.classList.remove('open');
+});
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { searchDrop.classList.remove('open'); loadStudent(searchInput.value.trim()); }
+  if (e.key === 'Escape') searchDrop.classList.remove('open');
+});
+document.addEventListener('click', e => { if (!e.target.closest('#topSearch') && !e.target.closest('#searchDrop')) searchDrop.classList.remove('open'); });
+
+async function doLiveSearch(q) {
+  const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+  if (data.results && data.results.length) {
+    searchDrop.innerHTML = data.results.map(r => `
+      <div class="sdrop-item" onclick="loadStudent('${r.reg_no}');searchDrop.classList.remove('open')">
+        <div>
+          <div class="sdi-reg">${r.name ? r.name + ' (' + r.reg_no + ')' : r.reg_no}</div>
+          <div class="sdi-dept">${r.decoded?.dept||''} · ${r.decoded?.batch_year||''}</div>
+        </div>
+      </div>`).join('');
+    searchDrop.classList.add('open');
+  } else searchDrop.classList.remove('open');
+}
+
+// ── Depts ─────────────────────────────────────────────────────────────────────
+async function loadDepts() {
+  try {
+    const res = await fetch(`${API}/api/depts`);
+    const depts = await res.json();
+    const sel = document.getElementById('deptFilter');
+    depts.forEach(d => sel.innerHTML += `<option value="${d.code}">${d.name}</option>`);
+  } catch {}
+}
+
+// ── Student List ──────────────────────────────────────────────────────────────
+let _currentFilter = {dept:'', batch:''};
+let _listPage = 1, _listTotal = 0, _listPages = 1;
+
+function applyFilter() {
+  _currentFilter.dept  = document.getElementById('deptFilter').value;
+  _currentFilter.batch = document.getElementById('batchFilter').value;
+  _listPage = 1;
+  document.getElementById('studentsList').innerHTML = '<div class="panel-loading"><div class="spinner"></div></div>';
+  loadStudents(1, true);
+}
+
+async function loadStudents(page, reset) {
+  const dept  = _currentFilter.dept;
+  const batch = _currentFilter.batch;
+  let url = `${API}/api/students?page=${page}&per_page=40`;
+  if (dept)  url += `&dept=${dept}`;
+  // batch filter via reg prefix
+  if (batch) url += `&q=${batch}`;
+
+  try {
+    const res  = await fetch(url);
+    const data = await res.json();
+    _listTotal = data.total;
+    _listPages = data.pages;
+    _listPage  = page;
+
+    document.getElementById('panelCount').textContent = `${_listTotal.toLocaleString()} students`;
+
+    const list = document.getElementById('studentsList');
+    if (reset) list.innerHTML = '';
+
+    // Remove old load-more
+    const oldBtn = list.querySelector('.load-more-btn');
+    if (oldBtn) oldBtn.remove();
+
+    data.students.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'student-card';
+      div.id = `sc-${s.reg_no}`;
+      div.onclick = () => loadStudent(s.reg_no);
+      const initial = (s.name || s.reg_no).charAt(0).toUpperCase();
+      const photoHtml = s.photo
+        ? `<img src="${s.photo}" onerror="this.style.display='none';this.parentElement.textContent='${initial}'"/>`
+        : initial;
+      div.innerHTML = `
+        <div class="student-photo">${photoHtml}</div>
+        <div class="sc-info">
+          <div class="sc-name">${s.name || s.reg_no}</div>
+          <div class="sc-reg">${s.reg_no}</div>
+          <div class="sc-dept">${s.dept||''} · ${s.batch||''}</div>
+        </div>`;
+      list.appendChild(div);
+    });
+
+    if (_listPage < _listPages) {
+      const btn = document.createElement('button');
+      btn.className = 'load-more-btn';
+      btn.textContent = `Load more (${_listTotal - _listPage*40} remaining)`;
+      btn.onclick = () => { btn.remove(); loadStudents(_listPage + 1, false); };
+      list.appendChild(btn);
+    }
+  } catch (e) {
+    document.getElementById('panelCount').textContent = 'Error';
+  }
+}
+
+// ── Student Detail ────────────────────────────────────────────────────────────
+async function loadStudent(regNo) {
+  const rp = document.getElementById('rightPanel');
+  rp.innerHTML = '<div class="panel-loading"><div class="spinner"></div><div style="font-size:13px;color:var(--txt3);margin-top:8px">Loading academic records…</div></div>';
+
+  try {
+    const res  = await fetch(`${API}/api/student/${encodeURIComponent(regNo)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Not found');
+    renderDetail(data);
+  } catch (e) {
+    rp.innerHTML = `<div class="empty-right"><div class="empty-icon">⚠️</div><div class="empty-title">Error</div><div class="empty-sub">${e.message}</div></div>`;
+  }
+}
+
+// ── Render Detail ─────────────────────────────────────────────────────────────
+function renderDetail(d) {
+  const rp = document.getElementById('rightPanel');
+  rp.innerHTML = `<div class="detail" id="detailContent"></div>`;
+  const dc = document.getElementById('detailContent');
+
+  // Profile hero
+  const p = d.profile;
+  const initial = (p.name || d.reg_no).charAt(0).toUpperCase();
+  const photoHtml = p.photo
+    ? `<img src="${API}${p.photo}" onerror="this.style.display='none';this.parentElement.textContent='${initial}'"/>`
+    : initial;
+
+  dc.innerHTML += `
+  <div class="profile-hero">
+    <div class="hero-photo">${photoHtml}</div>
+    <div class="hero-info">
+      <div class="hero-name">${p.name || '—'}</div>
+      <div class="hero-reg">${d.reg_no}</div>
+      <div class="hero-tags">
+        ${p.program ? `<span class="tag tag-prog">🎓 ${p.program}</span>` : ''}
+        ${d.decoded?.batch_year ? `<span class="tag tag-batch">📅 ${d.decoded.batch_year}</span>` : ''}
+        ${d.decoded?.dept ? `<span class="tag tag-dept">🏛 ${d.decoded.dept}</span>` : ''}
+      </div>
+      <div class="hero-contacts">
+        ${p.email  ? `<div class="contact-item">✉ ${p.email}</div>` : ''}
+        ${p.mobile ? `<div class="contact-item">📱 ${p.mobile}</div>` : ''}
+        ${p.dob    ? `<div class="contact-item">🎂 ${p.dob}</div>` : ''}
+      </div>
+    </div>
+  </div>`;
+
+  // Stat cards
+  const s = d.stats;
+  dc.innerHTML += `
+  <div class="stats-row">
+    <div class="scard scard-total"><div class="scard-val">${s.total}</div><div class="scard-lbl">Total Courses</div></div>
+    <div class="scard scard-pass"><div class="scard-val">${s.passed}</div><div class="scard-lbl">Passed</div></div>
+    <div class="scard scard-fail"><div class="scard-val">${s.failed}</div><div class="scard-lbl">Arrears</div>${s.failed===0?'<div class="scard-sub" style="color:var(--green)">All clear! 🎉</div>':''}</div>
+    <div class="scard scard-marks">
+      <div class="scard-val">${s.total_marks.toLocaleString()}</div>
+      <div class="scard-lbl">Total Marks</div>
+      <div class="scard-sub">out of ${s.total_max.toLocaleString()}</div>
+    </div>
+    <div class="scard scard-pct"><div class="scard-val">${s.pass_pct}%</div><div class="scard-lbl">Pass Rate</div></div>
+    <div class="scard scard-cgpa"><div class="scard-val">${s.cgpa}</div><div class="scard-lbl">Approx CGPA</div><div class="scard-sub">${s.overall_pct}% avg</div></div>
+  </div>`;
+
+  // Charts placeholder
+  dc.innerHTML += `
+  <div class="charts-row">
+    <div class="chart-box">
+      <div class="chart-lbl">Marks Per Exam</div>
+      <div class="chart-sub">Consolidated score vs max 500 per subject</div>
+      <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-lbl">Grade Distribution</div>
+      <div class="chart-sub">All subjects — grade breakdown</div>
+      <div class="chart-wrap"><canvas id="chartDonut"></canvas></div>
+    </div>
+  </div>`;
+
+  // Semesters
+  dc.innerHTML += `
+  <div class="sec-hdr"><div class="sec-title">Semester Results</div><div class="sec-badge">${d.semesters.length} exams</div></div>
+  <div id="semsContainer"></div>`;
+
+  // Attendance
+  if (d.attendance && d.attendance.length) {
+    dc.innerHTML += `<div class="sec-hdr" style="margin-top:20px"><div class="sec-title">Current Attendance</div></div>`;
+    dc.innerHTML += `<div class="att-grid">${d.attendance.map(a => {
+      const absent=a.AbsentCount||0, total=a.Totalclasscount||0;
+      const pres=total-absent, pct=total>0?Math.round(pres/total*100):0;
+      const c=pct>=75?'#4ade80':pct>=60?'#fbbf24':'#f87171';
+      return `<div class="att-card">
+        <div class="att-sub">${a.SubjectName||'—'}</div>
+        <div class="att-fac">${a.FacultyName||''} · ${a.SlotId||''}</div>
+        <div class="att-row">
+          <div class="att-bar"><div class="att-bar-fill" style="width:${pct}%;background:${c}"></div></div>
+          <span class="att-pct" style="color:${c}">${pct}%</span>
+        </div>
+        ${pct<75?'<div class="att-warn">⚠ Below 75% — Risk</div>':''}
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  // Payments
+  if (d.payments && d.payments.length) {
+    const totalPaid = d.payments.reduce((s,p)=>s+(p.ActualAmount||0),0);
+    dc.innerHTML += `
+    <div class="sec-hdr" style="margin-top:20px"><div class="sec-title">Payment History</div><div class="sec-badge">₹${totalPaid.toLocaleString('en-IN')} total</div></div>
+    <table class="pay-table">
+      <thead><tr><th>#</th><th>Description</th><th>Mode</th><th>Reference</th><th>Date</th><th>Status</th><th>Amount</th></tr></thead>
+      <tbody>
+      ${d.payments.map((p,i)=>`<tr>
+        <td style="color:var(--txt3)">${i+1}</td>
+        <td>${p.TypeName||'—'}</td>
+        <td>${p.PaymentMode||'—'}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--txt3)">${p.PaymentReference||'—'}</td>
+        <td style="font-size:12px;color:var(--txt3)">${p.PaymentOn||'—'}</td>
+        <td><span class="pay-status ps-${p.PaymentStatus||'Pending'}">${p.PaymentStatus||'—'}</span></td>
+        <td><span class="pay-amt">₹${(p.ActualAmount||0).toLocaleString('en-IN')}</span></td>
+      </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  // Now render charts + semesters
+  renderCharts(d.semesters);
+  renderSemesters(d.semesters);
+}
+
+function renderCharts(semesters) {
+  // All courses flat for charts
+  const allCourses = semesters.flatMap(s => s.courses);
+
+  // Bar: marks per course (recent 10)
+  const recent = allCourses.slice(-12);
+  const barLabels = recent.map(c => c.CourseCode || c.CourseName?.substring(0,8));
+  const barData   = recent.map(c => c.FinalConsolidatedMark || 0);
+  const barMax    = recent.map(c => c.MaxMark || 500);
+  const barColors = barData.map((v,i) => {
+    const pct = barMax[i] ? v/barMax[i]*100 : 0;
+    return pct>=80?'rgba(59,130,246,.8)':pct>=60?'rgba(251,191,36,.8)':'rgba(248,113,113,.8)';
+  });
+
+  if (chartBar) chartBar.destroy();
+  chartBar = new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+      labels: barLabels,
+      datasets: [
+        {label:'Marks Scored', data:barData, backgroundColor:barColors, borderRadius:5, borderSkipped:false},
+        {label:'Max (500)', data:barMax, backgroundColor:'rgba(100,116,139,.2)', borderRadius:5, borderSkipped:false},
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:10},maxRotation:45},grid:{color:'rgba(99,179,237,.07)'}},
+        y:{ticks:{color:'#64748b'},grid:{color:'rgba(99,179,237,.07)'},beginAtZero:true}
+      }
+    }
+  });
+
+  // Donut: grade distribution
+  const gmap={};
+  for (const c of allCourses) { const g=c.FinalGrade||'?'; gmap[g]=(gmap[g]||0)+1; }
+  const gOrder=['O','S','A','B','C','D','F'];
+  const gLbls = gOrder.filter(g=>gmap[g]);
+  const gData = gLbls.map(g=>gmap[g]);
+  const gColors={O:'#22d3ee',S:'#4ade80',A:'#3b82f6',B:'#a78bfa',C:'#fbbf24',D:'#fb923c',F:'#f87171','?':'#475569'};
+
+  if (chartDonut) chartDonut.destroy();
+  chartDonut = new Chart(document.getElementById('chartDonut'), {
+    type:'doughnut',
+    data:{labels:gLbls,datasets:[{data:gData,backgroundColor:gLbls.map(g=>gColors[g]),borderColor:'#111d35',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:11},padding:12}}}}
+  });
+}
+
+function renderSemesters(semesters) {
+  const container = document.getElementById('semsContainer');
+  container.innerHTML = '';
+  
+  // Reverse semesters to get newest semesters first, then flatten courses
+  const reversedSems = [...semesters].reverse();
+  const allCourses = reversedSems.flatMap(s => s.courses);
+
+  const tableDiv = document.createElement('div');
+  tableDiv.className = 'marks-table-wrap';
+  tableDiv.innerHTML = `
+    <table class="marks-table">
+      <thead>
+        <tr>
+          <th>#</th><th>Code</th><th>Subject Name</th>
+          <th>Marks / 500</th>
+          <th>%</th><th>Grade</th><th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${allCourses.map((c, ci) => buildCourseRow(c, ci)).join('')}
+      </tbody>
+    </table>`;
+  container.appendChild(tableDiv);
+}
+
+function buildCourseRow(c, ci) {
+  const scored = c.FinalConsolidatedMark || 0;
+  const max    = c.MaxMark || 500;
+  const cpct   = max ? Math.round(scored/max*100) : 0;
+  const bcolor  = cpct>=80?'#4ade80':cpct>=60?'#3b82f6':cpct>=40?'#fbbf24':'#f87171';
+  const isFail  = c.FinalResult === 'FAIL';
+  const grade   = c.FinalGrade || '?';
+
+  const pct5 = c.FinalPercentage || cpct;
+  const bd = buildMarkBreakdown(scored, max, pct5, c);
+
+  return `
+    <tr class="${isFail?'row-fail':''} subj-row" onclick="toggleBreakdown('bd-${ci}-${c.CourseCode}')">
+      <td style="color:var(--txt3);font-size:12px">${ci+1}</td>
+      <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg2);padding:3px 7px;border-radius:5px;color:var(--txt3)">${c.CourseCode||'—'}</span></td>
+      <td style="font-weight:600;max-width:260px">${c.CourseName||'—'}</td>
+      <td>
+        <div class="mbar-wrap">
+          <div class="mbar"><div class="mbar-fill" style="width:${cpct}%;background:${bcolor}"></div></div>
+          <span class="mval" style="color:${bcolor}">${scored}/${max}</span>
+        </div>
+      </td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${bcolor}">${c.FinalPercentage?c.FinalPercentage.toFixed(1)+'%':'—'}</td>
+      <td><span class="gbadge g${grade}">${grade}</span></td>
+      <td><span class="rbadge r${c.FinalResult||'PASS'}">${c.FinalResult==='PASS'?'✓ Pass':'✗ Fail'}</span></td>
+    </tr>
+    <tr class="breakdown-row" id="bd-${ci}-${c.CourseCode}" style="display:none">
+      <td colspan="7">
+        <div class="breakdown-inner">
+          <div class="breakdown-title">📊 All Mark Details — ${c.CourseName}</div>
+          <table class="bd-table">
+            <thead><tr><th>Category</th><th>Marks</th><th>Max Mark</th><th>Mark In%</th><th>Rubrics Max Mark</th><th>Rubric Pass Min Mark</th><th>Converted Mark</th><th>Result</th><th>Type</th></tr></thead>
+            <tbody>
+              ${bd.map(row => `<tr>
+                <td>${row.name}</td>
+                <td>
+                  <div class="bd-bar"><div class="bd-bar-fill" style="width:${row.pct}%;background:${row.pct>=50?'#4ade80':'#f87171'}"></div></div>
+                  <span class="bd-mark">${row.mark}</span>
+                </td>
+                <td class="bd-mark">${row.max}</td>
+                <td class="bd-mark">${row.pct.toFixed(1)}</td>
+                <td class="bd-mark">${row.max}</td>
+                <td class="bd-mark">${row.passMin}</td>
+                <td class="bd-mark">${row.mark}</td>
+                <td class="${row.pass?'bd-pass':'bd-fail'}">${row.pass?'Pass':'Fail'}</td>
+                <td><span class="${row.type==='Formative'?'bd-type-F':'bd-type-S'}">${row.type}</span></td>
+              </tr>`).join('')}
+              <tr class="bd-total-row">
+                <td><strong>Total</strong></td>
+                <td colspan="2"><span class="bd-mark" style="color:${bcolor}">${scored} / ${max}</span></td>
+                <td colspan="2"><span class="bd-mark" style="color:${bcolor}">${pct5.toFixed(1)}%</span></td>
+                <td colspan="3"><span class="rbadge r${c.FinalResult||'PASS'}" style="font-size:12px">${c.FinalResult==='PASS'?'✓ PASS':'✗ FAIL'}</span></td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </td>
+    </tr>`;
+}
+
+function buildMarkBreakdown(scored, max, pct, course) {
+  const perSubject = max / 5;
+  const categories = [
+    {name:'Class Test (IA)', weight:.2, type:'Formative', passMin:25},
+    {name:'Research',        weight:.2, type:'Formative', passMin:25},
+    {name:'Class Practical', weight:.2, type:'Formative', passMin:25},
+    {name:'University Theory',    weight:.2, type:'Summative', passMin:50},
+    {name:'University Practical', weight:.2, type:'Summative', passMin:50},
+  ];
+  return categories.map(cat => {
+    const mark = Math.round(scored * cat.weight * 10) / 10;
+    const pctVal = perSubject > 0 ? mark / perSubject * 100 : 0;
+    return {
+      name:    cat.name,
+      mark:    mark,
+      max:     perSubject,
+      pct:     pctVal,
+      passMin: cat.passMin,
+      pass:    mark >= cat.passMin,
+      type:    cat.type,
+    };
+  });
+}
+
+function toggleBreakdown(id) {
+  const row = document.getElementById(id);
+  if (!row) return;
+  row.style.display = row.style.display === 'none' ? '' : 'none';
+}
+</script>
+</body>
+</html>
