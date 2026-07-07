@@ -408,8 +408,9 @@ let _loggedInReg = null;
 
 // ── Login ─────────────────────────────────────────────────────────────────────
 function checkStoredSession() {
-  const reg = sessionStorage.getItem('arms_reg');
-  if (reg) {
+  const reg   = sessionStorage.getItem('arms_reg');
+  const token = sessionStorage.getItem('arms_token');
+  if (reg && token) {
     _loggedInReg = reg;
     unlockPortal(reg, sessionStorage.getItem('arms_name') || '');
   }
@@ -438,8 +439,9 @@ async function doLogin() {
     });
     const data = await res.json();
     if (data.success) {
-      sessionStorage.setItem('arms_reg',  data.reg_no);
-      sessionStorage.setItem('arms_name', data.name);
+      sessionStorage.setItem('arms_reg',   data.reg_no);
+      sessionStorage.setItem('arms_name',  data.name);
+      sessionStorage.setItem('arms_token', data.token);
       _loggedInReg = data.reg_no;
       unlockPortal(data.reg_no, data.name);
     } else {
@@ -479,8 +481,14 @@ function unlockPortal(regNo, name) {
 function doLogout() {
   sessionStorage.removeItem('arms_reg');
   sessionStorage.removeItem('arms_name');
+  sessionStorage.removeItem('arms_token');
   _loggedInReg = null;
   location.reload();
+}
+
+function authHeaders() {
+  const token = sessionStorage.getItem('arms_token') || '';
+  return {'Content-Type': 'application/json', 'X-Session-Token': token};
 }
 
 // Press Enter on password field
@@ -513,7 +521,7 @@ searchInput.addEventListener('keydown', e => {
 document.addEventListener('click', e => { if (!e.target.closest('#topSearch') && !e.target.closest('#searchDrop')) searchDrop.classList.remove('open'); });
 
 async function doLiveSearch(q) {
-  const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`);
+  const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`, {headers: authHeaders()});
   const data = await res.json();
   if (data.results && data.results.length) {
     searchDrop.innerHTML = data.results.map(r => `
@@ -610,7 +618,7 @@ async function loadStudent(regNo) {
   rp.innerHTML = '<div class="panel-loading"><div class="spinner"></div><div style="font-size:13px;color:var(--txt3);margin-top:8px">Loading academic records…</div></div>';
 
   try {
-    const res  = await fetch(`${API}/api/student/${encodeURIComponent(regNo)}`);
+    const res  = await fetch(`${API}/api/student/${encodeURIComponent(regNo)}`, {headers: authHeaders()});
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Not found');
     renderDetail(data);
