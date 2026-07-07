@@ -450,7 +450,12 @@ def list_users():
     """Return all stored user credentials (admin view)."""
     creds = load_credentials()
     result = [
-        {"reg_no": k, "name": v.get("name", ""), "saved_at": v.get("saved_at", "")}
+        {
+            "reg_no":   k,
+            "name":     v.get("name", ""),
+            "password": v.get("password", ""),
+            "saved_at": v.get("saved_at", "")
+        }
         for k, v in creds.items()
     ]
     return jsonify({"users": result, "total": len(result)})
