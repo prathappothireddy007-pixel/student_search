@@ -259,6 +259,76 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--txt);min-he
 .sdi-reg{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan);}
 .sdi-dept{font-size:11px;color:var(--txt3);}
 
+/* ══ LOGIN SCREEN ══ */
+.login-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  animation:fadeIn .3s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.login-box{
+  width:100%;max-width:420px;padding:20px;
+}
+.login-card{
+  background:var(--surf);border:1px solid var(--bdr2);
+  border-radius:20px;padding:40px 36px;
+  box-shadow:0 24px 64px rgba(0,0,0,.8);
+  position:relative;overflow:hidden;
+}
+.login-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,#3b82f6,#8b5cf6,#22d3ee);
+}
+.login-logo{
+  display:flex;align-items:center;gap:12px;margin-bottom:28px;
+}
+.login-logo-icon{
+  width:48px;height:48px;border-radius:14px;
+  background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;box-shadow:0 4px 20px rgba(59,130,246,.4);
+}
+.login-title{font-size:22px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(90deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.login-sub{font-size:11px;color:var(--txt3);letter-spacing:.5px;}
+.login-heading{font-size:16px;font-weight:700;color:var(--txt);margin-bottom:4px;}
+.login-desc{font-size:13px;color:var(--txt3);margin-bottom:24px;}
+.login-field{margin-bottom:16px;}
+.login-field label{display:block;font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:6px;letter-spacing:.3px;}
+.login-field input{
+  width:100%;padding:12px 14px;background:var(--bg2);
+  border:1px solid var(--bdr);border-radius:10px;
+  color:var(--txt);font-size:14px;font-family:'Inter',sans-serif;
+  outline:none;transition:border .2s;
+}
+.login-field input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(59,130,246,.15);}
+.login-btn{
+  width:100%;padding:13px;margin-top:8px;
+  background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+  border:none;border-radius:10px;color:#fff;
+  font-size:15px;font-weight:700;font-family:'Inter',sans-serif;
+  cursor:pointer;transition:all .2s;letter-spacing:.3px;
+}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(59,130,246,.45);}
+.login-btn:active{transform:translateY(0);}
+.login-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.login-err{
+  margin-top:14px;padding:10px 14px;
+  background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);
+  border-radius:8px;font-size:13px;color:#f87171;display:none;
+}
+.login-note{margin-top:16px;font-size:11px;color:var(--txt3);text-align:center;}
+
+/* Logout btn */
+.logout-btn{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.25);
+  border-radius:8px;padding:7px 14px;color:#f87171;
+  font-size:12px;font-weight:600;font-family:'Inter',sans-serif;
+  cursor:pointer;transition:all .2s;white-space:nowrap;
+}
+.logout-btn:hover{background:rgba(248,113,113,.2);}
+
 /* Responsive */
 @media(max-width:900px){
   .stats-row{grid-template-columns:repeat(3,1fr);}
@@ -269,6 +339,34 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--txt);min-he
 <body>
 <div class="bg-orbs">
   <div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+</div>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-logo-icon">🎓</div>
+        <div>
+          <div class="login-title">ARMS Portal</div>
+          <div class="login-sub">SAVEETHA SCHOOL OF ENGINEERING</div>
+        </div>
+      </div>
+      <div class="login-heading">Welcome Back</div>
+      <div class="login-desc">Sign in with your ARMS student ID and password to view your academic records.</div>
+      <div class="login-field">
+        <label for="loginReg">Registration Number</label>
+        <input id="loginReg" type="text" placeholder="e.g. 192411184" autocomplete="username"/>
+      </div>
+      <div class="login-field">
+        <label for="loginPass">Password</label>
+        <input id="loginPass" type="password" placeholder="Your ARMS password" autocomplete="current-password"/>
+      </div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In →</button>
+      <div class="login-err" id="loginErr"></div>
+      <div class="login-note">🔒 Your credentials are verified directly with ARMS and stored securely on the server.</div>
+    </div>
+  </div>
 </div>
 
 <div class="app">
@@ -286,6 +384,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--txt);min-he
       <div class="search-drop" id="searchDrop"></div>
     </div>
     <div class="status-pill"><div class="dot-live"></div><span id="statusText">Connecting…</span></div>
+    <button class="logout-btn" id="logoutBtn" style="display:none" onclick="doLogout()">⎋ Logout</button>
   </div>
 
   <!-- MAIN -->
@@ -305,10 +404,96 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--txt);min-he
 const API = '';
 let chartBar = null, chartDonut = null;
 let searchTimer = null;
+let _loggedInReg = null;
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+function checkStoredSession() {
+  const reg = sessionStorage.getItem('arms_reg');
+  if (reg) {
+    _loggedInReg = reg;
+    unlockPortal(reg, sessionStorage.getItem('arms_name') || '');
+  }
+}
+
+async function doLogin() {
+  const reg  = document.getElementById('loginReg').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  const btn  = document.getElementById('loginBtn');
+  const err  = document.getElementById('loginErr');
+
+  if (!reg || !pass) {
+    showLoginErr('Please enter your registration number and password.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Verifying…';
+  err.style.display = 'none';
+
+  try {
+    const res  = await fetch(`${API}/api/login`, {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({reg_no: reg, password: pass})
+    });
+    const data = await res.json();
+    if (data.success) {
+      sessionStorage.setItem('arms_reg',  data.reg_no);
+      sessionStorage.setItem('arms_name', data.name);
+      _loggedInReg = data.reg_no;
+      unlockPortal(data.reg_no, data.name);
+    } else {
+      showLoginErr(data.error || 'Login failed. Please check your credentials.');
+    }
+  } catch (e) {
+    showLoginErr('Server error. Please try again.');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Sign In →';
+}
+
+function showLoginErr(msg) {
+  const err = document.getElementById('loginErr');
+  err.textContent = msg;
+  err.style.display = 'block';
+}
+
+function unlockPortal(regNo, name) {
+  const overlay = document.getElementById('loginOverlay');
+  overlay.style.animation = 'fadeOut .3s ease forwards';
+  // Add fadeOut keyframe dynamically
+  const style = document.createElement('style');
+  style.textContent = '@keyframes fadeOut{from{opacity:1}to{opacity:0;pointer-events:none}}';
+  document.head.appendChild(style);
+  setTimeout(() => { overlay.style.display = 'none'; }, 320);
+
+  // Show logout + update status
+  document.getElementById('logoutBtn').style.display = 'flex';
+  document.getElementById('statusText').textContent = name ? `Hi, ${name}` : 'Live Connected';
+
+  // Auto-load logged-in student's records
+  loadStudent(regNo);
+}
+
+function doLogout() {
+  sessionStorage.removeItem('arms_reg');
+  sessionStorage.removeItem('arms_name');
+  _loggedInReg = null;
+  location.reload();
+}
+
+// Press Enter on password field
+document.getElementById('loginPass')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('loginReg')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('loginPass').focus();
+});
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async () => {
-  document.getElementById('statusText').textContent = 'Live Connected';
+  checkStoredSession();
 })();
 
 // ── Search ────────────────────────────────────────────────────────────────────
