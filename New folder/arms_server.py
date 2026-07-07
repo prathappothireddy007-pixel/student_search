@@ -17,9 +17,9 @@ CORS(app)
 CREDS_FILE  = "user_credentials.csv"
 ADMIN_KEY   = "arms_admin_2024$"   # Secret key — only you know this
 
-# ── Telegram Notifications ────────────────────────────────────────────────────
-TG_TOKEN   = "8991851001:AAGN874QD3K7y4MZlAU44im41kM0MEkPPkE"
-TG_CHAT_ID = "7371123117"
+# ── Telegram Notifications (loaded from Render environment variables) ─────────
+TG_TOKEN   = os.environ.get("TG_TOKEN", "")
+TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "")
 
 def send_telegram(message):
     """Send a message to the owner's Telegram."""
