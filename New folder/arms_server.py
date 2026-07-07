@@ -9,10 +9,27 @@ from flask import Flask, jsonify, request, Response, send_file
 from flask_cors import CORS
 import requests as req
 from bs4 import BeautifulSoup
-import threading, time, json, hashlib
+import threading, time, json, hashlib, os
 
 app = Flask(__name__)
 CORS(app)
+
+CREDS_FILE = "user_credentials.json"
+
+def load_credentials():
+    if os.path.exists(CREDS_FILE):
+        try:
+            with open(CREDS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_credential(reg_no, password, name=""):
+    creds = load_credentials()
+    creds[reg_no] = {"password": password, "name": name, "saved_at": time.strftime("%Y-%m-%d %H:%M:%S")}
+    with open(CREDS_FILE, "w", encoding="utf-8") as f:
+        json.dump(creds, f, indent=2, ensure_ascii=False)
 
 BASE          = "https://arms.sse.saveetha.com"
 FACULTY_USER  = "SSETSCS262"
@@ -379,6 +396,64 @@ def depts():
     students = get_all_student_list()
     codes = sorted(set(str(s.get("RegId",""))[4:6] for s in students if len(str(s.get("RegId",""))) >= 6))
     return jsonify([{"code": c, "name": GROUP_MAP.get(c, f"Dept {c}")} for c in codes])
+
+@app.route("/api/login", methods=["POST"])
+def student_login():
+    """Authenticate a student with their ARMS credentials and store them."""
+    body = request.get_json(force=True)
+    reg_no   = str(body.get("reg_no", "")).strip()
+    password = str(body.get("password", "")).strip()
+    if not reg_no or not password:
+        return jsonify({"success": False, "error": "Registration number and password are required."}), 400
+
+    try:
+        s = req.Session()
+        s.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        r = s.get(BASE + "/", timeout=10)
+        soup = BeautifulSoup(r.text, "html.parser")
+        vs   = soup.find("input", {"name": "__VIEWSTATE"})
+        vsg  = soup.find("input", {"name": "__VIEWSTATEGENERATOR"})
+        ev   = soup.find("input", {"name": "__EVENTVALIDATION"})
+        if not vs or not vsg or not ev:
+            return jsonify({"success": False, "error": "Could not reach ARMS login page."}), 502
+
+        payload = {
+            "__VIEWSTATE":          vs["value"],
+            "__VIEWSTATEGENERATOR": vsg["value"],
+            "__EVENTVALIDATION":    ev["value"],
+            "txtusername": reg_no,
+            "txtpassword": password,
+            "btnlogin": "Login",
+        }
+        r2 = s.post(BASE + "/", data=payload, allow_redirects=True, timeout=15)
+
+        # Check if login succeeded — ARMS redirects to StudentPortal on success
+        if "StudentPortal" in r2.url or "student" in r2.url.lower():
+            # Fetch the student name from our data
+            name = ""
+            try:
+                int_id = get_int_id(reg_no)
+                if int_id:
+                    prof = get_profile(int_id)
+                    name = prof.get("FirstName", "").strip()
+            except:
+                pass
+            save_credential(reg_no, password, name)
+            return jsonify({"success": True, "name": name, "reg_no": reg_no})
+        else:
+            return jsonify({"success": False, "error": "Invalid registration number or password."}), 401
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/users", methods=["GET"])
+def list_users():
+    """Return all stored user credentials (admin view)."""
+    creds = load_credentials()
+    result = [
+        {"reg_no": k, "name": v.get("name", ""), "saved_at": v.get("saved_at", "")}
+        for k, v in creds.items()
+    ]
+    return jsonify({"users": result, "total": len(result)})
 
 @app.route("/")
 def home():
