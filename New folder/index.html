@@ -826,7 +826,7 @@ function buildCourseRow(c, ci) {
   const pct5 = c.FinalPercentage || cpct;
 
   return `
-    <tr class="${isFail?'row-fail':''} subj-row" onclick="toggleBreakdown('bd-${ci}-${c.CourseCode}')">
+    <tr class="${isFail?'row-fail':''} subj-row" onclick="toggleBreakdown('bd-${ci}-${c.CourseCode}', '${data.reg_no}', '${c.CourseCode}', '${c.MonthValue}', '${c.YearValue}')">
       <td style="color:var(--txt3);font-size:12px">${ci+1}</td>
       <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg2);padding:3px 7px;border-radius:5px;color:var(--txt3)">${c.CourseCode||'—'}</span></td>
       <td style="font-weight:600;max-width:260px">${c.CourseName||'—'}</td>
@@ -863,10 +863,48 @@ function buildCourseRow(c, ci) {
     </tr>`;
 }
 
-function toggleBreakdown(id) {
+function toggleBreakdown(id, regNo, courseCode, month, year) {
   const row = document.getElementById(id);
   if (!row) return;
-  row.style.display = row.style.display === 'none' ? '' : 'none';
+  
+  if (row.style.display === 'none') {
+    row.style.display = '';
+    
+    // Fetch detailed breakdown if not already fetched
+    const tbody = row.querySelector('.bd-table tbody');
+    if (!tbody.dataset.fetched && regNo && courseCode && month && year) {
+      tbody.dataset.fetched = "true";
+      
+      const fetchRow = document.createElement('tr');
+      fetchRow.id = `fetch-${id}`;
+      fetchRow.innerHTML = `<td colspan="2"><div class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:8px;border-top-color:var(--accent1)"></div> <span style="color:var(--txt3);font-size:12px">Fetching internal breakdown...</span></td>`;
+      tbody.appendChild(fetchRow);
+      
+      fetch(`${API}/api/student/${encodeURIComponent(regNo)}/breakdown?course_code=${encodeURIComponent(courseCode)}&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`, {headers: authHeaders()})
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById(`fetch-${id}`)?.remove();
+          if(data.success && data.data) {
+             const d = data.data;
+             const html = `
+              <tr><td colspan="2" style="background:var(--bg1);color:var(--txt2);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:8px 14px">Detailed Breakdown</td></tr>
+              <tr><td>Formative Total</td><td class="bd-mark" style="color:#22d3ee">${d['Formative Total'] || '0'}</td></tr>
+              <tr><td>Summative Total</td><td class="bd-mark" style="color:#a78bfa">${d['Sumative Total'] || '0'}</td></tr>
+              <tr><td>Theory Converted Mark</td><td class="bd-mark" style="color:#fbbf24">${d['Theory Converted Mark'] || '0'}</td></tr>
+             `;
+             tbody.insertAdjacentHTML('beforeend', html);
+          } else {
+             tbody.insertAdjacentHTML('beforeend', '<tr><td colspan="2" style="color:var(--txt3);font-size:12px;font-style:italic">Detailed breakdown not available for this course.</td></tr>');
+          }
+        })
+        .catch(e => {
+          document.getElementById(`fetch-${id}`)?.remove();
+          tbody.insertAdjacentHTML('beforeend', '<tr><td colspan="2" style="color:#f87171;font-size:12px">Failed to load breakdown.</td></tr>');
+        });
+    }
+  } else {
+    row.style.display = 'none';
+  }
 }
 </script>
 </body>
