@@ -632,8 +632,8 @@ function renderPortfolio(d) {
           <div class="stat-lbl">Arrears</div>
         </div>
         <div class="stat-pill">
-          <div class="stat-val mono">${d.semesters?.length || 0}</div>
-          <div class="stat-lbl">Semesters</div>
+          <div class="stat-val mono">${allCourses.length || 0}</div>
+          <div class="stat-lbl">Subjects</div>
         </div>
       </div>
     </div>
@@ -785,12 +785,12 @@ function renderCharts(semesters) {
   });
 
   const allCourses = semesters.flatMap(s=>s.courses);
-  const gmap = {'O':0,'A+':0,'A':0,'B+':0,'B':0,'C':0,'U':0,'I':0,'F':0};
+  const gmap = {'S':0,'A':0,'B':0,'C':0,'D':0,'E':0,'F':0};
   allCourses.forEach(c => { if(c.FinalGrade && gmap[c.FinalGrade]!==undefined) gmap[c.FinalGrade]++; });
   
   const gLbls = Object.keys(gmap).filter(g=>gmap[g]>0);
   const gData = gLbls.map(g=>gmap[g]);
-  const gColors={'O':'#ffffff','A+':'rgba(255,255,255,0.8)','A':'rgba(255,255,255,0.6)','B+':'rgba(255,255,255,0.4)','B':'rgba(255,255,255,0.2)','C':'rgba(255,255,255,0.1)','U':'#f87171','I':'#ef4444','F':'#dc2626'};
+  const gColors={'S':'#ffffff','A':'rgba(255,255,255,0.8)','B':'rgba(255,255,255,0.6)','C':'rgba(255,255,255,0.4)','D':'rgba(255,255,255,0.2)','E':'rgba(255,255,255,0.1)','F':'#dc2626'};
 
   new Chart(document.getElementById('pieChart'), {
     type: 'doughnut',
