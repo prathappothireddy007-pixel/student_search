@@ -148,19 +148,30 @@ def fapi(handler, page, mode, extra=None, retry=True):
     url = f"{BASE}/Handler/{handler}.ashx"
     params = {"Page": page, "Mode": mode}
     if extra: params.update(extra)
+    # Add anti-bot headers
+    s.headers.update({
+        "Referer": f"{BASE}/FacultyPortal/Landing.aspx",
+        "X-Requested-With": "XMLHttpRequest",
+        "Accept": "application/json, text/javascript, */*; q=0.01"
+    })
     try:
         r = s.get(url, params=params, timeout=15)
         if r.text.strip():
-            data = r.json()
-            return data
+            try:
+                return r.json()
+            except Exception as json_e:
+                print(f"[FAPI ERROR] JSON decode failed. Status: {r.status_code}, Text: {r.text[:200]}")
+                raise json_e
         return {}
     except Exception as e:
+        print(f"[FAPI EXCEPTION] {str(e)}")
         if retry:
             global _fac_session
             with _session_lock:
                 _fac_session = _login_faculty()
             return fapi(handler, page, mode, extra, False)
-        return {}
+        # Instead of silently returning {}, return a special dict with the error so we can read it
+        return {"error": str(e), "trace": "FAPI completely failed"}
 
 # ── Reg Decoder ───────────────────────────────────────────────────────────────
 GROUP_MAP = {
@@ -200,6 +211,8 @@ def _safe_list(data):
 
 def get_int_id(reg_no):
     data = fapi("Student", "StudentView", "GETALLRECORDREGNOLIBS", {"Id": reg_no})
+    if isinstance(data, dict) and "error" in data:
+        raise Exception(f"FAPI Error: {data['error']}")
     rows = _safe_list(data)
     if rows: return str(rows[0].get("StudentId", ""))
     return ""
