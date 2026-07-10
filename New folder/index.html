@@ -615,12 +615,12 @@ function renderPortfolio(d) {
     <!-- HERO -->
     <div class="hero">
       <div class="hero-tag mono">Student Portfolio</div>
-      <img src="https://arms.sse.saveetha.com/Saveetha_Live/StudentPhotos/${d.reg_no}.jpg" 
-           onerror="this.onerror=null; this.src='https://arms.sse.saveetha.com/Saveetha_Live/StudentUploads/${p.ProfilePictureUrl}'; this.onerror=function(){ this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.FirstName || d.reg_no)}&background=111&color=fff&size=120&font-size=0.33'; };"
+      <img src="${API}${p.photo}" 
+           onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name || d.reg_no)}&background=111&color=fff&size=120&font-size=0.33';"
            style="width:120px; height:120px; border-radius:50%; object-fit:cover; margin-bottom: 20px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 0 30px rgba(255,255,255,0.05);"
            alt="Profile Photo">
-      <div class="hero-title serif">${p.FirstName || d.reg_no}</div>
-      <div class="hero-subtitle">Pursuing ${p.Program || 'Engineering'} at Saveetha School of Engineering.</div>
+      <div class="hero-title serif">${p.name || d.reg_no}</div>
+      <div class="hero-subtitle">Pursuing ${p.program || 'Engineering'} at Saveetha School of Engineering.</div>
       
       <div class="hero-stats">
         <div class="stat-pill">
@@ -665,19 +665,23 @@ function renderPortfolio(d) {
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 16px;">
         <div>
           <div style="color:var(--txt3); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Email</div>
-          <div style="color:var(--txt1); font-size:14px;">${p.EmailId || 'N/A'}</div>
+          <div style="color:var(--txt1); font-size:14px;">${p.email || 'N/A'}</div>
         </div>
         <div>
           <div style="color:var(--txt3); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Mobile</div>
-          <div style="color:var(--txt1); font-size:14px; font-family:'JetBrains Mono', monospace;">${p.MobileNumber || 'N/A'}</div>
+          <div style="color:var(--txt1); font-size:14px; font-family:'JetBrains Mono', monospace;">${p.mobile || 'N/A'}</div>
         </div>
         <div>
           <div style="color:var(--txt3); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Date of Birth</div>
-          <div style="color:var(--txt1); font-size:14px; font-family:'JetBrains Mono', monospace;">${p.DateOfBirth || 'N/A'}</div>
+          <div style="color:var(--txt1); font-size:14px; font-family:'JetBrains Mono', monospace;">${p.dob || 'N/A'}</div>
+        </div>
+        <div>
+          <div style="color:var(--txt3); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Group / Section</div>
+          <div style="color:var(--txt1); font-size:14px;">${p.section || 'N/A'}</div>
         </div>
         <div>
           <div style="color:var(--txt3); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Admission Year</div>
-          <div style="color:var(--txt1); font-size:14px;">${p.Years || 'N/A'}</div>
+          <div style="color:var(--txt1); font-size:14px;">${p.years || 'N/A'}</div>
         </div>
       </div>
     </div>
