@@ -341,6 +341,7 @@ def get_student_data(reg_no):
             "dob":     profile.get("DateOfBirth",""),
             "program": profile.get("Program",""),
             "section": profile.get("SectionName",""),
+            "years":   profile.get("Years",""),
             "photo":   photo,
         },
         "stats": {
