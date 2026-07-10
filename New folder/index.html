@@ -810,7 +810,7 @@ function renderSemesters(semesters) {
         </tr>
       </thead>
       <tbody>
-        ${allCourses.map((c, ci) => buildCourseRow(c, ci, data.reg_no)).join('')}
+        ${allCourses.map((c, ci) => buildCourseRow(c, ci, d.reg_no)).join('')}
       </tbody>
     </table>`;
   container.appendChild(tableDiv);
