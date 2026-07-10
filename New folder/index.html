@@ -810,13 +810,13 @@ function renderSemesters(semesters) {
         </tr>
       </thead>
       <tbody>
-        ${allCourses.map((c, ci) => buildCourseRow(c, ci)).join('')}
+        ${allCourses.map((c, ci) => buildCourseRow(c, ci, data.reg_no)).join('')}
       </tbody>
     </table>`;
   container.appendChild(tableDiv);
 }
 
-function buildCourseRow(c, ci) {
+function buildCourseRow(c, ci, regNo) {
   const scored = c.FinalConsolidatedMark || 0;
   const max    = c.MaxMark || 500;
   const cpct   = max ? Math.round(scored/max*100) : 0;
@@ -826,7 +826,7 @@ function buildCourseRow(c, ci) {
   const pct5 = c.FinalPercentage || cpct;
 
   return `
-    <tr class="${isFail?'row-fail':''} subj-row" onclick="toggleBreakdown('bd-${ci}-${c.CourseCode}', '${data.reg_no}', '${c.CourseCode}', '${c.MonthValue}', '${c.YearValue}')">
+    <tr class="${isFail?'row-fail':''} subj-row" onclick="toggleBreakdown('bd-${ci}-${c.CourseCode}', '${regNo}', '${c.CourseCode}', '${c.MonthValue}', '${c.YearValue}')">
       <td style="color:var(--txt3);font-size:12px">${ci+1}</td>
       <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg2);padding:3px 7px;border-radius:5px;color:var(--txt3)">${c.CourseCode||'—'}</span></td>
       <td style="font-weight:600;max-width:260px">${c.CourseName||'—'}</td>
