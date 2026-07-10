@@ -539,9 +539,10 @@ sInput.addEventListener('input', (e) => {
       const data = await res.json();
       if (data.results && data.results.length) {
         sDrop.innerHTML = data.results.map(r => `
-          <div class="sres-item" onclick="loadStudent('${r.reg_no}'); sInput.value=''; sDrop.style.display='none';">
+          <div class="sres-item" onclick="loadStudent('${r.reg_no}'); sInput.value=''; sDrop.style.display='none';" style="display:flex; align-items:center; gap: 12px; padding: 8px 12px;">
+            <img src="${API}${r.photo}" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(r.name || r.reg_no)}&background=111&color=fff&size=40';" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #111;">
             <div style="flex:1">
-              <div class="sres-name">${r.name}</div>
+              <div class="sres-name">${r.name || 'Unknown'}</div>
               <div class="sres-reg mono">${r.reg_no}</div>
             </div>
           </div>
