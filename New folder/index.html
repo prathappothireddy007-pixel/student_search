@@ -699,9 +699,9 @@ function toggleBD(id, regNo, code, month, year) {
 function renderCharts(semesters) {
   if (!semesters || !semesters.length) return;
   const recent = [...semesters].slice(0,8).reverse();
-  const labels = recent.map(s => s.sem_name.substring(0,8));
-  const barData = recent.map(c => c.FinalConsolidatedMark || 0);
-  const barMax = recent.map(c => c.MaxMark || 500);
+  const labels = recent.map(s => (s.semester || s.sem_name || '').substring(0,8));
+  const barData = recent.map(s => s.total_marks || 0);
+  const barMax = recent.map(s => s.max_marks || 500);
   
   const barColors = barData.map((v,i) => {
     const p = barMax[i] ? (v/barMax[i]*100) : 0;
