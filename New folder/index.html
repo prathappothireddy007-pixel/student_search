@@ -503,7 +503,7 @@ async function doLogin() {
   try {
     const res = await fetch(`${API}/api/login`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({username: reg, password: pass})
+      body: JSON.stringify({reg_no: reg, password: pass})
     });
     const data = await res.json();
     if (data.success) {
