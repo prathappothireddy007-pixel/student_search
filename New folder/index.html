@@ -737,7 +737,7 @@ function renderDetail(d) {
 
   // Now render charts + semesters
   renderCharts(d.semesters);
-  renderSemesters(d.semesters);
+  renderSemesters(d.semesters, d.reg_no);
 }
 
 function renderCharts(semesters) {
@@ -790,7 +790,7 @@ function renderCharts(semesters) {
   });
 }
 
-function renderSemesters(semesters) {
+function renderSemesters(semesters, regNo) {
   const container = document.getElementById('semsContainer');
   container.innerHTML = '';
   
@@ -810,7 +810,7 @@ function renderSemesters(semesters) {
         </tr>
       </thead>
       <tbody>
-        ${allCourses.map((c, ci) => buildCourseRow(c, ci, d.reg_no)).join('')}
+        ${allCourses.map((c, ci) => buildCourseRow(c, ci, regNo)).join('')}
       </tbody>
     </table>`;
   container.appendChild(tableDiv);
