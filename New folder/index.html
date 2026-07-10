@@ -823,9 +823,7 @@ function buildCourseRow(c, ci) {
   const bcolor  = cpct>=80?'#4ade80':cpct>=60?'#3b82f6':cpct>=40?'#fbbf24':'#f87171';
   const isFail  = c.FinalResult === 'FAIL';
   const grade   = c.FinalGrade || '?';
-
   const pct5 = c.FinalPercentage || cpct;
-  const bd = buildMarkBreakdown(scored, max, pct5, c);
 
   return `
     <tr class="${isFail?'row-fail':''} subj-row" onclick="toggleBreakdown('bd-${ci}-${c.CourseCode}')">
@@ -845,60 +843,24 @@ function buildCourseRow(c, ci) {
     <tr class="breakdown-row" id="bd-${ci}-${c.CourseCode}" style="display:none">
       <td colspan="7">
         <div class="breakdown-inner">
-          <div class="breakdown-title">📊 All Mark Details — ${c.CourseName}</div>
+          <div class="breakdown-title">📊 Result Details — ${c.CourseName}</div>
           <table class="bd-table">
-            <thead><tr><th>Category</th><th>Marks</th><th>Max Mark</th><th>Mark In%</th><th>Rubrics Max Mark</th><th>Rubric Pass Min Mark</th><th>Converted Mark</th><th>Result</th><th>Type</th></tr></thead>
+            <thead><tr><th>Detail</th><th>Value</th></tr></thead>
             <tbody>
-              ${bd.map(row => `<tr>
-                <td>${row.name}</td>
-                <td>
-                  <div class="bd-bar"><div class="bd-bar-fill" style="width:${row.pct}%;background:${row.pct>=50?'#4ade80':'#f87171'}"></div></div>
-                  <span class="bd-mark">${row.mark}</span>
-                </td>
-                <td class="bd-mark">${row.max}</td>
-                <td class="bd-mark">${row.pct.toFixed(1)}</td>
-                <td class="bd-mark">${row.max}</td>
-                <td class="bd-mark">${row.passMin}</td>
-                <td class="bd-mark">${row.mark}</td>
-                <td class="${row.pass?'bd-pass':'bd-fail'}">${row.pass?'Pass':'Fail'}</td>
-                <td><span class="${row.type==='Formative'?'bd-type-F':'bd-type-S'}">${row.type}</span></td>
-              </tr>`).join('')}
-              <tr class="bd-total-row">
-                <td><strong>Total</strong></td>
-                <td colspan="2"><span class="bd-mark" style="color:${bcolor}">${scored} / ${max}</span></td>
-                <td colspan="2"><span class="bd-mark" style="color:${bcolor}">${pct5.toFixed(1)}%</span></td>
-                <td colspan="3"><span class="rbadge r${c.FinalResult||'PASS'}" style="font-size:12px">${c.FinalResult==='PASS'?'✓ PASS':'✗ FAIL'}</span></td>
-                <td></td>
-              </tr>
+              <tr><td>Course Code</td><td class="bd-mark">${c.CourseCode||'—'}</td></tr>
+              <tr><td>Course Name</td><td class="bd-mark">${c.CourseName||'—'}</td></tr>
+              <tr><td>Total Marks Scored</td><td><span class="bd-mark" style="color:${bcolor}">${scored}</span></td></tr>
+              <tr><td>Maximum Marks</td><td class="bd-mark">${max}</td></tr>
+              <tr><td>Percentage</td><td class="bd-mark" style="color:${bcolor}">${pct5.toFixed?pct5.toFixed(1):pct5}%</td></tr>
+              <tr><td>Grade</td><td><span class="gbadge g${grade}" style="font-size:13px">${grade}</span></td></tr>
+              <tr><td>Result</td><td><span class="rbadge r${c.FinalResult||'PASS'}" style="font-size:12px">${c.FinalResult==='PASS'?'✓ PASS':'✗ FAIL'}</span></td></tr>
+              <tr><td>Exam Period</td><td class="bd-mark">${c.MonthYearValue||'—'}</td></tr>
+              <tr><td>Result Date</td><td class="bd-mark">${c.ResultOn?new Date(c.ResultOn).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—'}</td></tr>
             </tbody>
           </table>
         </div>
       </td>
     </tr>`;
-}
-
-function buildMarkBreakdown(scored, max, pct, course) {
-  const perSubject = max / 5;
-  const categories = [
-    {name:'Class Test (IA)', weight:.2, type:'Formative', passMin:25},
-    {name:'Research',        weight:.2, type:'Formative', passMin:25},
-    {name:'Class Practical', weight:.2, type:'Formative', passMin:25},
-    {name:'University Theory',    weight:.2, type:'Summative', passMin:50},
-    {name:'University Practical', weight:.2, type:'Summative', passMin:50},
-  ];
-  return categories.map(cat => {
-    const mark = Math.round(scored * cat.weight * 10) / 10;
-    const pctVal = perSubject > 0 ? mark / perSubject * 100 : 0;
-    return {
-      name:    cat.name,
-      mark:    mark,
-      max:     perSubject,
-      pct:     pctVal,
-      passMin: cat.passMin,
-      pass:    mark >= cat.passMin,
-      type:    cat.type,
-    };
-  });
 }
 
 function toggleBreakdown(id) {
