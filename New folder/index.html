@@ -614,7 +614,8 @@ function renderPortfolio(d) {
     <!-- HERO -->
     <div class="hero">
       <div class="hero-tag mono">Student Portfolio</div>
-      <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(p.FirstName || d.reg_no)}&background=111&color=fff&size=120&font-size=0.33" 
+      <img src="https://arms.sse.saveetha.com/Saveetha_Live/StudentPhotos/${d.reg_no}.jpg" 
+           onerror="this.onerror=null; this.src='https://arms.sse.saveetha.com/Saveetha_Live/StudentUploads/${p.ProfilePictureUrl}'; this.onerror=function(){ this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.FirstName || d.reg_no)}&background=111&color=fff&size=120&font-size=0.33'; };"
            style="width:120px; height:120px; border-radius:50%; object-fit:cover; margin-bottom: 20px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 0 30px rgba(255,255,255,0.05);"
            alt="Profile Photo">
       <div class="hero-title serif">${p.FirstName || d.reg_no}</div>
@@ -650,7 +651,33 @@ function renderPortfolio(d) {
           <div class="card-title serif">Grade Distribution</div>
           <div class="card-sub">Overall performance breakdown</div>
         </div>
-        <div style="position:relative;height:240px;display:flex;justify-content:center"><canvas id="pieChart"></canvas></div>
+        <div style="position:relative;height:240px;display:flex;align-items:center;justify-content:center"><canvas id="pieChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- STUDENT DETAILS BENTO -->
+    <div class="bento-card" style="margin-top: 16px;">
+      <div class="card-header">
+        <div class="card-title serif">Student Details</div>
+        <div class="card-sub">Personal and contact information</div>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 16px;">
+        <div>
+          <div style="color:var(--txt3); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Email</div>
+          <div style="color:var(--txt1); font-size:14px;">${p.EmailId || 'N/A'}</div>
+        </div>
+        <div>
+          <div style="color:var(--txt3); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Mobile</div>
+          <div style="color:var(--txt1); font-size:14px; font-family:'JetBrains Mono', monospace;">${p.MobileNumber || 'N/A'}</div>
+        </div>
+        <div>
+          <div style="color:var(--txt3); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Date of Birth</div>
+          <div style="color:var(--txt1); font-size:14px; font-family:'JetBrains Mono', monospace;">${p.DateOfBirth || 'N/A'}</div>
+        </div>
+        <div>
+          <div style="color:var(--txt3); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Admission Year</div>
+          <div style="color:var(--txt1); font-size:14px;">${p.Years || 'N/A'}</div>
+        </div>
       </div>
     </div>
     
