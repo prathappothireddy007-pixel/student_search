@@ -584,20 +584,49 @@ function renderPortfolio(d) {
   const reversedSems = [...(d.semesters||[])].reverse();
   const allCourses = reversedSems.flatMap(s => s.courses);
   
+  // CALCULATE CGPA & ARREARS
+  let arrearCount = 0;
+  let gpSum = 0;
+  let gpCount = 0;
+  const gradePoints = {'S':10, 'A':9, 'B':8, 'C':7, 'D':6, 'E':5};
+  let courseStatus = {}; 
+  if (d.semesters) {
+      [...(d.semesters)].forEach(s => {
+          if(!s.courses) return;
+          s.courses.forEach(c => {
+             const code = c.CourseCode;
+             const grade = c.FinalGrade;
+             if (grade === 'F' || grade === 'FAIL' || grade === 'U' || grade === 'I' || grade === 'W') {
+                courseStatus[code] = 'F';
+             } else if (gradePoints[grade]) {
+                courseStatus[code] = grade;
+             }
+          });
+      });
+  }
+  Object.values(courseStatus).forEach(grade => {
+      if (grade === 'F') { arrearCount++; } 
+      else if (gradePoints[grade]) { gpSum += gradePoints[grade]; gpCount++; }
+  });
+  let calculatedCgpa = gpCount > 0 ? (gpSum / gpCount).toFixed(2) : 'N/A';
+
   let html = `
     <!-- HERO -->
     <div class="hero">
       <div class="hero-tag mono">Student Portfolio</div>
+      <img src="https://arms.sse.saveetha.com/Saveetha_Live/StudentPhotos/${d.reg_no}.jpg" 
+           style="width:120px; height:120px; border-radius:50%; object-fit:cover; margin-bottom: 20px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 0 30px rgba(255,255,255,0.05);"
+           onerror="this.style.display='none'" alt="Profile Photo">
       <div class="hero-title serif">${p.name || d.reg_no}</div>
       <div class="hero-subtitle">Pursuing ${p.degree||'Engineering'} in ${p.branch||'Computer Science'} at Saveetha School of Engineering.</div>
       
       <div class="hero-stats">
         <div class="stat-pill">
-          <div class="stat-val mono">${p.cgpa || 'N/A'}</div>
+          <div class="stat-val mono">${calculatedCgpa}</div>
           <div class="stat-lbl">CGPA</div>
         </div>
         <div class="stat-pill">
-          <div class="stat-val mono">${p.arrear_count || '0'}</div>
+          <div class="stat-val mono">${arrearCount}</div>
           <div class="stat-lbl">Arrears</div>
         </div>
         <div class="stat-pill">
