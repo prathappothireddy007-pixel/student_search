@@ -229,13 +229,32 @@ def get_enrollment(int_id):
     rows = _safe_list(data)
     return rows[0] if rows else {}
 
-def get_mark_breakdown(course_id, student_session=None):
-    """Try to get 5-category mark breakdown for a course."""
-    # Try with faculty session
-    data = fapi("Testmark", "RevaluationStudent", "StudTestMark", {"CourseId": course_id})
-    rows = _safe_list(data)
-    if rows: return rows
-    return []
+def get_breakdown(reg_no, course_code, month, year):
+    """Get real Formative/Summative breakdown via Faculty Result View API."""
+    monthyear = f"{month}{year}"
+    courses_data = fapi("Controller", "CoursebyMonth", "PublishCoursebyMonthNew", {"Monthyear": monthyear})
+    if not isinstance(courses_data, dict) or "Table" not in courses_data:
+        return None
+        
+    s_ids = [c["SubjectId"] for c in courses_data["Table"] if c.get("SubjectCode") == course_code]
+    if not s_ids: return None
+    
+    def check_section(sid):
+        res = fapi("Controller", "ResultView", "NewResultViewFaculty", {"Coursename": sid})
+        if isinstance(res, dict) and "Table" in res:
+            for row in res["Table"]:
+                if row.get("RegNo", "").startswith(reg_no):
+                    return row
+        return None
+        
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(check_section, sid): sid for sid in s_ids}
+        for future in concurrent.futures.as_completed(futures):
+            res = future.result()
+            if res:
+                return res
+    return None
 
 def get_student_data(reg_no):
     """Full student data fetch."""
@@ -414,12 +433,21 @@ def student_detail(reg_no):
         import traceback
         return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
-@app.route("/api/student/<reg_no>/marks/<course_sno>")
+@app.route("/api/student/<reg_no>/breakdown")
 @require_login
-def mark_breakdown(reg_no, course_sno):
-    """Get 5-category mark breakdown for a specific course."""
-    rows = get_mark_breakdown(course_sno)
-    return jsonify({"marks": rows})
+def mark_breakdown(reg_no):
+    """Get Formative/Summative breakdown for a specific course."""
+    course_code = request.args.get("course_code")
+    month = request.args.get("month")
+    year = request.args.get("year")
+    
+    if not all([course_code, month, year]):
+        return jsonify({"success": False, "error": "Missing parameters"}), 400
+        
+    res = get_breakdown(reg_no, course_code, month, year)
+    if res:
+        return jsonify({"success": True, "data": res})
+    return jsonify({"success": False, "error": "Breakdown not found"}), 404
 
 @app.route("/api/image/<path:filename>")
 def proxy_image(filename):
