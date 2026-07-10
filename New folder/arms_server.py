@@ -483,35 +483,31 @@ def search():
     if len(q) < 2:
         return jsonify({"results": []})
     students = get_all_student_list()
-    results  = []
-    # Search by reg number prefix — fast
+    raw_results = []
+    
     for s in students:
         reg = str(s.get("RegId",""))
         if q in reg.upper():
             iid = str(s.get("StudentId",""))
             dec = decode_reg(reg)
-            results.append({"reg_no": reg, "int_id": iid, "name": "", "decoded": dec})
-            if len(results) >= 20: break
-    # If query looks like a name (has letters), enrich with profile names
-    if any(c.isalpha() for c in q) and len(results) < 5:
+            raw_results.append({"reg_no": reg, "int_id": iid, "decoded": dec})
+            if len(raw_results) >= 8: break
+
+    results = []
+    if raw_results:
         import concurrent.futures
-        def check_name(s):
-            reg = str(s.get("RegId",""))
-            iid = str(s.get("StudentId",""))
-            prof = get_profile(iid)
-            name = prof.get("FirstName","").strip().upper()
-            if q in name:
-                dec = decode_reg(reg)
-                return {"reg_no": reg, "int_id": iid, "name": prof.get("FirstName","").strip(), "decoded": dec}
-            return None
-        # Check a sample of students for name match (limit to avoid timeout)
+        def enrich(r):
+            prof = get_profile(r["int_id"])
+            name = prof.get("FirstName","").strip()
+            photo_file = prof.get("ProfilePictureUrl","")
+            photo = f"/api/image/{photo_file}" if photo_file else ""
+            return {**r, "name": name, "photo": photo, "program": prof.get("Program", "")}
+            
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
-            for r in ex.map(check_name, students[:500]):
-                if r and len(results) < 20:
-                    # avoid duplicates
-                    if not any(x["reg_no"] == r["reg_no"] for x in results):
-                        results.append(r)
-    return jsonify({"results": results[:15]})
+            for enriched in ex.map(enrich, raw_results):
+                results.append(enriched)
+
+    return jsonify({"results": results})
 
 @app.route("/api/depts")
 @require_login
