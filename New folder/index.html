@@ -475,7 +475,7 @@ window.onload = () => {
 };
 
 function authHeaders() {
-  return {'Authorization': 'Bearer ' + sessionStorage.getItem('arms_token')};
+  return {'X-Session-Token': sessionStorage.getItem('arms_token')};
 }
 
 function logout() {
