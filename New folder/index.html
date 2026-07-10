@@ -614,11 +614,11 @@ function renderPortfolio(d) {
     <!-- HERO -->
     <div class="hero">
       <div class="hero-tag mono">Student Portfolio</div>
-      <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(p.name || d.reg_no)}&background=111&color=fff&size=120&font-size=0.33" 
+      <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(p.FirstName || d.reg_no)}&background=111&color=fff&size=120&font-size=0.33" 
            style="width:120px; height:120px; border-radius:50%; object-fit:cover; margin-bottom: 20px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 0 30px rgba(255,255,255,0.05);"
            alt="Profile Photo">
-      <div class="hero-title serif">${p.name || d.reg_no}</div>
-      <div class="hero-subtitle">Pursuing ${p.degree||'Engineering'} in ${p.branch||'Computer Science'} at Saveetha School of Engineering.</div>
+      <div class="hero-title serif">${p.FirstName || d.reg_no}</div>
+      <div class="hero-subtitle">Pursuing ${p.Program || 'Engineering'} at Saveetha School of Engineering.</div>
       
       <div class="hero-stats">
         <div class="stat-pill">
