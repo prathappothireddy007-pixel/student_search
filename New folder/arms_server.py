@@ -115,16 +115,31 @@ FACULTY_PASS  = "kumbakonam123$"
 # ── Session ───────────────────────────────────────────────────────────────────
 _fac_session  = None
 _session_lock = threading.Lock()
+_session_ts   = 0              # last successful login time
 _student_cache = {}          # reg_no -> {data, ts}
 _list_cache    = {"data": None, "ts": 0}
 CACHE_TTL      = 300         # 5 min
+SESSION_MAX_AGE = 1800       # Re-login after 30 min of inactivity
 
 def get_fac_session():
-    global _fac_session
+    global _fac_session, _session_ts
     with _session_lock:
-        if _fac_session is None:
+        # Force re-login if session is too old (covers Render suspend/resume)
+        if _fac_session is None or (time.time() - _session_ts) > SESSION_MAX_AGE:
+            print(f"[AUTH] Session expired or missing (age={(time.time() - _session_ts):.0f}s). Re-logging in...")
             _fac_session = _login_faculty()
+            _session_ts = time.time()
         return _fac_session
+
+def _force_relogin():
+    """Force a fresh faculty login. Call when session is detected as stale."""
+    global _fac_session, _session_ts, _student_cache, _list_cache
+    with _session_lock:
+        _fac_session = _login_faculty()
+        _session_ts = time.time()
+        _student_cache = {}
+        _list_cache = {"data": None, "ts": 0}
+    return _fac_session
 
 def _login_faculty():
     s = req.Session()
@@ -144,6 +159,7 @@ def _login_faculty():
     return s
 
 def fapi(handler, page, mode, extra=None, retry=True):
+    global _session_ts
     s = get_fac_session()
     url = f"{BASE}/Handler/{handler}.ashx"
     params = {"Page": page, "Mode": mode}
@@ -156,21 +172,35 @@ def fapi(handler, page, mode, extra=None, retry=True):
     })
     try:
         r = s.get(url, params=params, timeout=15)
-        if r.text.strip():
+        text = r.text.strip()
+        
+        # Detect expired session: ARMS returns HTML login page instead of JSON
+        if text and (text.startswith("<!DOCTYPE") or text.startswith("<html") or 
+                     "btnlogin" in text or "txtusername" in text or
+                     r.url.endswith("/") or "login" in r.url.lower()):
+            print(f"[FAPI] Session expired (got HTML/redirect). Forcing re-login...")
+            if retry:
+                _force_relogin()
+                return fapi(handler, page, mode, extra, False)
+            return {}
+        
+        _session_ts = time.time()  # mark session as active
+        
+        if text:
             try:
                 return r.json()
             except Exception as json_e:
-                print(f"[FAPI ERROR] JSON decode failed. Status: {r.status_code}, Text: {r.text[:200]}")
+                print(f"[FAPI ERROR] JSON decode failed. Status: {r.status_code}, Text: {text[:200]}")
+                if retry:
+                    _force_relogin()
+                    return fapi(handler, page, mode, extra, False)
                 raise json_e
         return {}
     except Exception as e:
         print(f"[FAPI EXCEPTION] {str(e)}")
         if retry:
-            global _fac_session
-            with _session_lock:
-                _fac_session = _login_faculty()
+            _force_relogin()
             return fapi(handler, page, mode, extra, False)
-        # Instead of silently returning {}, return a special dict with the error so we can read it
         return {"error": str(e), "trace": "FAPI completely failed"}
 
 # ── Reg Decoder ───────────────────────────────────────────────────────────────
