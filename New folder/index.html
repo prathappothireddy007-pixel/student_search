@@ -469,6 +469,8 @@ window.onload = () => {
   if (_loggedInReg && sessionStorage.getItem('arms_token')) {
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'flex';
+    // Auto-load profile on page refresh (will handle 401 gracefully)
+    loadStudent(_loggedInReg);
   } else {
     document.getElementById('loginOverlay').style.display = 'flex';
   }
@@ -567,6 +569,19 @@ async function loadStudent(regNo) {
     
   try {
     const res = await fetch(`${API}/api/student/${encodeURIComponent(regNo)}`, {headers: authHeaders()});
+    if (res.status === 401) {
+      // Session expired (Render restarted) — force re-login
+      sessionStorage.clear();
+      _loggedInReg = null;
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('logoutBtn').style.display = 'none';
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="serif">Session Expired</div>
+          <p>Please log in again to continue.</p>
+        </div>`;
+      return;
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
     renderPortfolio(data);
