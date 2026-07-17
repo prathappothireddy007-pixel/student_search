@@ -644,6 +644,33 @@ def home():
     except Exception as e:
         return f"Could not find index.html. Error: {str(e)}", 404
 
+@app.route("/health")
+def health():
+    """Health check endpoint for keep-alive pings."""
+    return jsonify({"status": "ok", "uptime": time.time()})
+
+# ── Keep-Alive Thread (prevents Render free tier from sleeping) ───────────────
+def _keep_alive():
+    """Ping our own /health endpoint every 10 minutes to prevent Render suspend."""
+    import urllib.request
+    render_url = os.environ.get("RENDER_EXTERNAL_URL", "")
+    if not render_url:
+        print("[KEEP-ALIVE] No RENDER_EXTERNAL_URL set. Skipping keep-alive.")
+        return
+    ping_url = f"{render_url}/health"
+    print(f"[KEEP-ALIVE] Started. Pinging {ping_url} every 10 min.")
+    while True:
+        time.sleep(600)  # 10 minutes
+        try:
+            urllib.request.urlopen(ping_url, timeout=10)
+            print(f"[KEEP-ALIVE] Ping OK at {time.strftime('%H:%M:%S')}")
+        except Exception as e:
+            print(f"[KEEP-ALIVE] Ping failed: {e}")
+
+# Start keep-alive thread on import (works with gunicorn too)
+_ka_thread = threading.Thread(target=_keep_alive, daemon=True)
+_ka_thread.start()
+
 # Pre-login only when running locally or directly
 if __name__ == "__main__":
     print("[*] Connecting to ARMS...")
