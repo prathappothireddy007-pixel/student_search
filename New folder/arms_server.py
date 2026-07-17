@@ -645,7 +645,7 @@ def home():
         return f"Could not find index.html. Error: {str(e)}", 404
 
 @app.route("/health")
-def health():
+def health_check():
     """Health check endpoint for keep-alive pings."""
     return jsonify({"status": "ok", "uptime": time.time()})
 
